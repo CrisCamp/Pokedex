@@ -2,80 +2,67 @@ import express from 'express'
 import { Pokemon } from '../types/pokemon.type'
 import PokemonService from '../services/pokemon.service'
 import passport from 'passport'
-import { UserRequestType } from '../types/user.type'
+import { JwtRequestType } from '../types/user.type'
 import { ObjectId } from 'mongoose'
-import boom from '@hapi/boom'
 
 const router = express.Router()
 const service = new PokemonService()
 
+router.post(
+  '/',
+  passport.authenticate('jwt', { session: false }),
+  async (req: JwtRequestType, res) => {
+    // const sub = req.user.sub
+    const {
+      user: { sub }
+    } = req
+    const pokemon: Pokemon = req.body
+    const newPokemon = await service.create(
+      pokemon,
+      sub as unknown as ObjectId
+    )
+
+    res.status(201).json(newPokemon)
+  }
+)
+
 router.get(
   '/',
   passport.authenticate('jwt', { session: false }),
-  async (req: UserRequestType, res, next) => {
+  async (req: JwtRequestType, res, next) => {
     try {
-      if (req.query.name) {
-        const { name } = req.query
-        const pokemons = await service.findByName(name as string)
-        return res.status(200).json(pokemons)
-      }
-
-      if (req.query.type) {
-        const { type } = req.query
-        const pokemons = await service.findByType(type as string)
-        return res.status(200).json(pokemons)
-      }
-
-      if (req.query.weight) {
-        const { weight } = req.query
-        const pokemons = await service.findByWeight(weight as string)
-        return res.status(200).json(pokemons)
-      }
-      
-      if (req.query.height) {
-        const { height } = req.query
-        const pokemons = await service.findByHeight(height as string)
-        return res.status(200).json(pokemons)
-      }   
-
-      if (req.query.id) {
-        const { id } = req.query
-        const pokemon = await service.findById(id as string)
-        return res.status(200).json(pokemon)
-      }
-
-      if (req.query.generation) {
-        const { generation } = req.query
-        const pokemons = await service.findByGenerationName(generation as string)
-        return res.status(200).json(pokemons)
-      }
-
-      if (req.query.generationid) {
-        const { generationid } = req.query
-        const pokemons = await service.findByGenerationId(generationid as string)
-        return res.status(200).json(pokemons)
-      }
-
+      const { user } = req
+      console.log(user)
       const pokemons = await service.findAll()
       res.status(200).json(pokemons)
     } catch (error) {
-      console.error('Error:', error)
-      next(boom.boomify(error))
+      next(error)
     }
   }
 )
 
-router.post(
+router.get(
+  '/:id',
+  passport.authenticate('jwt', { session: false }),
+  async (req, res, next) => {
+    try {
+      const pokemon = await service.findById(req.params.id)
+      res.status(200).json(pokemon)
+    } catch (error) {
+      next(error)
+    }
+  }
+)
+
+router.get(
   '/',
   passport.authenticate('jwt', { session: false }),
   async (req, res, next) => {
     try {
-      const pokemon: Pokemon = req.body
-      const newPokemon = await service.create(pokemon)
-      res.status(201).json(newPokemon)
+      const pokemon = await service.findById(req.query.name as string)
+      res.status(200).json(pokemon)
     } catch (error) {
-      console.error('Error:', error)
-      next(boom.boomify(error))
+      next(error)
     }
   }
 )

@@ -1,50 +1,83 @@
 import express from 'express'
-import { Generation } from '../types/generation.type'
-import GenerationService from '../services/generation.service'
+import { Gen } from '../types/generation.type '
+import { JwtRequestType } from '../types/user.type'
 import passport from 'passport'
-import { UserRequestType } from '../types/user.type'
-import boom from '@hapi/boom'
+import GenerationService from '../services/generation.service'
+import { ObjectId } from 'mongoose'
 
 const router = express.Router()
 const service = new GenerationService()
 
+router.post(
+  '/',
+  passport.authenticate('jwt', { session: false }),
+  async (req: JwtRequestType, res) => {
+    // const sub = req.user.sub
+    const {
+      user: { sub }
+    } = req
+    const generation: Gen = req.body
+    const newPokemon = await service.create(
+      generation, 
+      sub as unknown as ObjectId
+    )
+
+    res.status(201).json(newPokemon)
+  }
+)
+
 router.get(
   '/',
   passport.authenticate('jwt', { session: false }),
-  async (req: UserRequestType, res, next) => {
+  async (req: JwtRequestType, res, next) => {
     try {
-      if (req.query.generation) {
-        const { generation } = req.query
-        const generations = await service.findByGeneration(
-          generation as string
-        )
-        return res.status(200).json(generations)
-      }
-      if (req.query.id) {
-        const { id } = req.query
-        const generation = await service.findById(id as string)
-        return res.status(200).json(generation)
-      }
-      const generations = await service.findAll()
-      res.status(200).json(generations)
+      const { user } = req
+      console.log(user)
+      const gens = await service.findAll()
+      res.status(200).json(gens)
     } catch (error) {
-      console.error('Error:', error)
-      next(boom.boomify(error))
+      next(error)
     }
   }
 )
 
-router.post(
+router.get(
+  '/',
+  passport.authenticate('jwt', { session: false }),
+  async (req: JwtRequestType, res, next) => {
+    try {
+      const { user } = req
+      console.log(user)
+      const gens = await service.findAll()
+      res.status(200).json(gens)
+    } catch (error) {
+      next(error)
+    }
+  }
+)
+
+router.get(
+  '/:id',
+  passport.authenticate('jwt', { session: false }),
+  async (req, res, next) => {
+    try {
+      const gen = await service.findById(req.params.id)
+      res.status(200).json(gen)
+    } catch (error) {
+      next(error)
+    }
+  }
+)
+
+router.get(
   '/',
   passport.authenticate('jwt', { session: false }),
   async (req, res, next) => {
     try {
-      const generation: Generation = req.body
-      const newGeneration = await service.create(generation)
-      res.status(201).json(newGeneration)
+      const gen = await service.findById(req.query.name as string)
+      res.status(200).json(gen)
     } catch (error) {
-      console.error('Error:', error)
-      next(boom.boomify(error))
+      next(error)
     }
   }
 )

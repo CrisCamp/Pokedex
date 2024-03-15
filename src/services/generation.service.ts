@@ -1,59 +1,54 @@
+import { ObjectId } from 'mongoose'
 import Generations from '../models/generation.model'
-import { Generation, GenerationModel } from '../types/generation.type'
+import { Gen } from '../types/generation.type '
 import boom from '@hapi/boom'
 
 class GenerationService {
-  async create(generation: Generation) {
-    try {
-      const newGeneration = await Generations.create(generation)
-      return newGeneration
-    } catch (error) {
-      console.log('No se guardo la generacion', error)
-      throw boom.badImplementation('Error al guardar la generacion')
-    }
-  }
+  async create(gen: Gen, userId: ObjectId) {
+    const newGeneration = await Generations.create({
+      ...gen,
+      user: userId
+    }).catch((error) => {
+      console.log('Could not save pokemon', error)
+    })
+    const existingGeneration = await this.findById((newGeneration as any)._id)
 
+    return existingGeneration.populate([{ path: 'user', strictPopulate: false }])
+  }
+    
   async findAll() {
-    try {
-      const generations = await Generations.find()
-      if (!generations || generations.length === 0) {
-        throw boom.notFound('No se encontraron las generaciones')
-      }
-      return generations
-    } catch (error) {
-      console.log('Error al conectarse a la base de datos', error)
-      throw boom.badImplementation('Error al buscar las generaciones')
+    const generations = await Generations.find()
+      .populate([{ path: 'user', strictPopulate: false }])
+      .catch((error) => {
+        console.log('Error while connecting to the DB', error)
+      })
+
+    if (!generations) {
+      throw boom.notFound('There are not categories')
     }
+
+    return generations
   }
 
   async findById(id: string) {
-    try {
-      const generation = await Generations.findById(id)
-      if (!generation) {
-        throw boom.notFound(`No se encontró la generacion con id ${id}`)
-      }
-      return generation
-    } catch (error) {
-      console.log(`Error al buscar la generacion por id ${id}`, error)
-      throw boom.notFound(`No se encontró la generacion con id ${id}`)
+    const generation = await Generations.findById(id).catch((error) => {
+      console.log('Error while connecting to the DB', error)
+    })
+
+    if (!generation) {
+      throw boom.notFound('Generation not found')
     }
+
+    return generation
   }
 
-  async findByGeneration(generation: string) {
-    try {
-      const generations = await Generations.find({
-        generation: generation
-      })
-      if (!generations || generations.length === 0) {
-        throw boom.notFound(`No se encontro la generacion ${generation}`)
-      }
-      return generations
-    } catch (error) {
-      console.log(
-        `Error al buscar la generacion por su tipo ${generation}`,
-        error
-      )
-      throw boom.notFound(`No se encontro la generacion${generation}`)
+  async findByName(name: string) {
+    const generation = await Generations.findOne({ name }).catch((error) => {
+      console.log('Could not retrieve generation info', error)
+    })
+
+    if (!generation) {
+      throw boom.notFound('Gen not found')
     }
   }
 }

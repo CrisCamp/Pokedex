@@ -1,7 +1,6 @@
 import express from 'express'
-import { User, UserModel } from '../types/user.type'
+import { User} from '../types/user.type'
 import UserService from '../services/user.service'
-import boom from '@hapi/boom'
 
 const router = express.Router()
 const service = new UserService()
